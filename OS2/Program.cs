@@ -2,9 +2,10 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace ConsoleApp1
+namespace OS2
 {
     class Program
     {
@@ -15,13 +16,36 @@ namespace ConsoleApp1
         static string storedHash2 = "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b";
         static string storedHash3 = "74e1bb62f8dabb8125a58852b63bdf6eaef667cb56ac7f7cdba6d7305c50a22f";
 
-        static string funcHashDecrypt(int numOfThread, string storedHash)
+        static bool marker = false;
+
+        static string bruteForce(string storedHash, int from, int to)
         {
-            int from = 0;
-            int to = 0;
-            string strHashDecrypt = "";
+            string luckyPass = "";
+            for (int j = from; j < to; j++)
+            {
+                if (marker == true) break;
+                using (SHA256 sha256Hash = SHA256.Create())
+                {
+                    byte[] sourceBytes = Encoding.UTF8.GetBytes(passwords[j]);
+                    byte[] hashBytes = sha256Hash.ComputeHash(sourceBytes);
+                    string hash = BitConverter.ToString(hashBytes).Replace("-", String.Empty).ToLower();
+                    if (hash == storedHash)
+                    {
+                        luckyPass = passwords[j];
+                        marker = true;
+                        break;
+                    }
+                }
+            }
+            return luckyPass;
+        }
+
+        static string threadFunc(int numOfThread, string storedHash)
+        {
             int[] valueThread = new int[numOfThread];
             int ostatok = valueComb % numOfThread;
+
+            Thread[] tasks = new Thread[numOfThread];
 
             for (int i = 0; i < numOfThread; i++)
             {
@@ -33,27 +57,34 @@ namespace ConsoleApp1
                 }
             }
 
-            int mark = 0;
-            Parallel.For(0, numOfThread, (mark, loopState) =>
+            string strHashDecrypt = "";
+            string strHashDecrypt1 = "";
+            int from = 0;
+            int to = 0;
+
+            for (int i = 0; i < numOfThread; i++)
             {
-                if (mark != 0) from += valueThread[mark - 1];
-                to = from + valueThread[mark];
-                for (int j = from; j < to; j++)
+                if (i != 0) from += valueThread[i - 1];
+                to = from + valueThread[i];
+
+                tasks[i] = new Thread(() =>
                 {
-                        using (SHA256 sha256Hash = SHA256.Create())
-                        {
-                            byte[] sourceBytes = Encoding.UTF8.GetBytes(passwords[j]);
-                            byte[] hashBytes = sha256Hash.ComputeHash(sourceBytes);
-                            string hash = BitConverter.ToString(hashBytes).Replace("-", String.Empty).ToLower();
-                            if (hash == storedHash)
-                            {
-                                strHashDecrypt = passwords[j];
-                                loopState.Stop();
-                            }
-                        }
-                }
-            });
-            return strHashDecrypt;
+                    strHashDecrypt = bruteForce(storedHash, from, to);
+                    if (strHashDecrypt != "")
+                    {
+                        strHashDecrypt1 = strHashDecrypt;
+                    }
+                });
+                tasks[i].Start();
+            }
+
+            for (int i = 0; i < numOfThread; i++)
+            {
+                tasks[i].Join();
+                tasks[i].Interrupt(); 
+            }
+            marker = false;
+            return strHashDecrypt1;
         }
 
         static void Main(string[] args)
@@ -88,9 +119,13 @@ namespace ConsoleApp1
 
             while (true)
             {
-                Console.WriteLine("---------------------------------------------------------------");
-                Console.WriteLine("Select mode: \n0. Exit \n1. Single threaded \n2. Multithreaded");
-                Console.WriteLine("---------------------------------------------------------------\n");
+                Console.WriteLine("---------------------------------------------------------------------");
+                Console.WriteLine("Choose hash to bruteforce: " +
+                    "\n0. Exit " +
+                    "\n1. 1115dd800feaacefdf481f1f9070374a2a81e27880f187396db67958b207cbad " +
+                    "\n2. 3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b" +
+                    "\n3. 74e1bb62f8dabb8125a58852b63bdf6eaef667cb56ac7f7cdba6d7305c50a22f");
+                Console.WriteLine("---------------------------------------------------------------------\n");
 
                 int answer = int.Parse(Console.ReadLine());
                 int numThreads = 0;
@@ -101,21 +136,35 @@ namespace ConsoleApp1
                 }
                 if (answer == 1)
                 {
-                    numThreads = 1;
+                    Console.WriteLine("Enter the number of threads: ");
+                    numThreads = int.Parse(Console.ReadLine());
                     Stopwatch swatch = new Stopwatch();
                     swatch.Start();
 
-                    Console.WriteLine("---------------------------------------------------------------");
-                    Console.WriteLine("Decrypt of first hash is " + funcHashDecrypt(numThreads, storedHash1));
-                    Console.WriteLine("Decrypt of second hash is " + funcHashDecrypt(numThreads, storedHash2));
-                    Console.WriteLine("Decrypt of third hash is " + funcHashDecrypt(numThreads, storedHash3));
+                    Console.WriteLine("---------------------------------------------------------------------\n");
+                    Console.WriteLine("Decrypt of first hash is " + threadFunc(numThreads, storedHash1));
 
                     swatch.Stop();
 
                     Console.WriteLine("\nTime taken to execute: " + swatch.Elapsed);
-                    Console.WriteLine("---------------------------------------------------------------\n");
+                    Console.WriteLine("---------------------------------------------------------------------\n");
                 }
                 if (answer == 2)
+                {
+                    Console.WriteLine("Enter the number of threads: ");
+                    numThreads = int.Parse(Console.ReadLine());
+                    Stopwatch swatch = new Stopwatch();
+                    swatch.Start();
+
+                    Console.WriteLine("---------------------------------------------------------------------\n");
+                    Console.WriteLine("Decrypt of second hash is " + threadFunc(numThreads, storedHash2));
+
+                    swatch.Stop();
+
+                    Console.WriteLine("\nTime taken to execute: " + swatch.Elapsed);
+                    Console.WriteLine("---------------------------------------------------------------------\n");
+                }
+                if (answer == 3)
                 {
                     Console.WriteLine("Enter the number of threads: ");
                     numThreads = int.Parse(Console.ReadLine());
@@ -123,15 +172,13 @@ namespace ConsoleApp1
                     Stopwatch swatch = new Stopwatch();
                     swatch.Start();
 
-                    Console.WriteLine("---------------------------------------------------------------");
-                    Console.WriteLine("Decrypt of first hash is " + funcHashDecrypt(numThreads, storedHash1));
-                    Console.WriteLine("Decrypt of second hash is " + funcHashDecrypt(numThreads, storedHash2));
-                    Console.WriteLine("Decrypt of third hash is " + funcHashDecrypt(numThreads, storedHash3));
+                    Console.WriteLine("---------------------------------------------------------------------\n");
+                    Console.WriteLine("Decrypt of third hash is " + threadFunc(numThreads, storedHash3));
 
                     swatch.Stop();
 
                     Console.WriteLine("\nTime taken to execute: " + swatch.Elapsed);
-                    Console.WriteLine("---------------------------------------------------------------\n");
+                    Console.WriteLine("---------------------------------------------------------------------\n");
                 }
             }
         }
