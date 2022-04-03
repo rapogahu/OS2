@@ -60,18 +60,21 @@ namespace OS2
             }
 
             string strHashDecrypt1 = System.String.Empty;
+
             int from = 0;
             int to = 0;
 
             for (int i = 0; i < numOfThread; i++)
             {
-                if (i != 0) from += valueThread[i - 1];
+                if (i != 0) from = to;
                 to = from + valueThread[i];
 
+                int start = from;
+                int finish = to;
                 tasks[i] = new Thread(() =>
                 {
                     string strHashDecrypt = System.String.Empty;
-                    strHashDecrypt = bruteForce(storedHash, from, to);
+                    strHashDecrypt = bruteForce(storedHash, start, finish);
                     if (!String.IsNullOrEmpty(strHashDecrypt))
                     {
                         strHashDecrypt1 = strHashDecrypt;
