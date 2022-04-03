@@ -47,6 +47,8 @@ namespace OS2
 
             Thread[] tasks = new Thread[numOfThread];
 
+            string[] answers = new string[numOfThread];
+
             for (int i = 0; i < numOfThread; i++)
             {
                 valueThread[i] = valueComb / numOfThread;
@@ -57,8 +59,7 @@ namespace OS2
                 }
             }
 
-            string strHashDecrypt = "";
-            string strHashDecrypt1 = "";
+            string strHashDecrypt1 = System.String.Empty;
             int from = 0;
             int to = 0;
 
@@ -69,8 +70,9 @@ namespace OS2
 
                 tasks[i] = new Thread(() =>
                 {
+                    string strHashDecrypt = System.String.Empty;
                     strHashDecrypt = bruteForce(storedHash, from, to);
-                    if (strHashDecrypt != "")
+                    if (!String.IsNullOrEmpty(strHashDecrypt))
                     {
                         strHashDecrypt1 = strHashDecrypt;
                     }
@@ -83,6 +85,7 @@ namespace OS2
                 tasks[i].Join();
                 tasks[i].Interrupt(); 
             }
+
             marker = false;
             return strHashDecrypt1;
         }
@@ -109,8 +112,7 @@ namespace OS2
                             for (int m = 0; m < alphabet.Length; m++)
                             {
                                 hashDecrypt[4] = alphabet[m];
-                                passwords[it] = new string(hashDecrypt);
-                                it++;
+                                passwords[it++] = new string(hashDecrypt);
                             }
                         }
                     }
